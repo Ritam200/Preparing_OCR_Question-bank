@@ -1,0 +1,20 @@
+streamlit
+pytesseract
+Pillow
+PyPDF2
+pdf2image
+fuzzywuzzy
+scikit-learn
+python-Levenshtein
+opencv-python-headless
+pyspellchecker
+
+
+
+# streamlit
+# pytesseract
+# Pillow
+# PyPDF2
+# pdf2image
+# fuzzywuzzy
+# python-Levenshtein # Dependency for fuzzywuzzy

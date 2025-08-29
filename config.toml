@@ -1,0 +1,21 @@
+[server]
+headless = true
+enableCORS = false
+port = 8501
+
+[browser]
+gatherUsageStats = false
+
+[theme]
+primaryColor="#FF4B4B"
+backgroundColor="#FFFFFF"
+secondaryBackgroundColor="#F0F2F6"
+textColor="#303030"
+font="sans serif"
+
+[global]
+# Set the page title and layout
+page_title = "Jadavpur University Question Analyzer"
+page_icon = "📚"
+layout = "wide"
+initial_sidebar_state = "expanded"

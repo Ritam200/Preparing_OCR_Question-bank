@@ -1,0 +1,31 @@
+[
+  {
+    "subject": "Mathematics for IT-II",
+    "subject_code": "IT/BS/B/T/222",
+    "year": "2nd Year",
+    "semester": "2nd Semester",
+    "topics": [
+      "Probability and Bayes’ Theorem",
+      "Random Variables and Probability Distributions",
+      "Exponential Distribution",
+      "Measures of Central Tendency: Mean, Median, Mode",
+      "Variance, Standard Deviation",
+      "Moments, Skewness and Kurtosis",
+      "Sampling Distributions",
+      "Standard Error and Estimation",
+      "Maximum Likelihood Estimation",
+      "Game Theory: Zero-Sum Games, Pure and Mixed Strategies",
+      "Inventory Models and EOQ",
+      "Queuing Theory and Kendall’s Notation",
+      "Project Management: PERT, CPM, Critical Path, Slack Calculation"
+    ],
+    "course_outcomes": [
+      "CO1: Understand probability concepts and Bayes’ theorem",
+      "CO2: Apply probability distributions to practical scenarios",
+      "CO3: Analyze data using descriptive statistics including skewness and kurtosis",
+      "CO4: Perform sampling and estimation including MLE",
+      "CO5: Apply operations research methods: game theory, inventory models, queuing",
+      "CO6: Demonstrate project management techniques using CPM and PERT"
+    ]
+  }
+]

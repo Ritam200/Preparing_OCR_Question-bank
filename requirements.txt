@@ -1,0 +1,14 @@
+streamlit
+pytesseract
+Pillow
+pandas
+google-generativeai
+pdf2image
+opencv-python-headless
+python-dotenv # For managing API keys securely
+
+
+# Flask
+# Pillow
+# pytesseract
+# pdf2image

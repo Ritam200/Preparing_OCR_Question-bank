@@ -50,6 +50,6 @@ To assist students and faculty in preparing an organized, searchable, and syllab
 ### 🧪 Clone & Install Dependencies
 
 ```bash
-git clone https://github.com/Ritam200/Preparing_OCR_Question-bank.git
+git clone https://github.com/Ritam200/Preparing_OCR_Question-bank
 pip install -r requirements.txt
 streamlit run app.py

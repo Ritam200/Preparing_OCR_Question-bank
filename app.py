@@ -1,4 +1,3 @@
-# app.py
 import streamlit as st
 from dotenv import load_dotenv
 load_dotenv()
@@ -6,174 +5,431 @@ import os
 import io
 import json
 import re
+import random
+import tempfile
 import pandas as pd
+import plotly.express as px
+from fpdf import FPDF
 
-from ocr_utils import ensure_tesseract, image_bytes_to_text, pdf_bytes_to_text
+# ✅ High-accuracy OCR functions
+from ocr_utils import ensure_tesseract, pdf_bytes_to_text, image_bytes_to_text
 from syllabus_parser import parse_syllabus_text, validate_syllabus_json
 from gemini_handler import analyze_question
+from ai_cleaner import clean_text_with_ai   # NEW import
 
+# ---------------- App Config ----------------
 st.set_page_config(page_title="Jadavpur University Question Analyzer", layout="wide")
-st.title("Jadavpur University Question Analyzer")
-st.markdown("## Preparing a Question Bank using OCR")
+st.title("📘 Jadavpur University Question Analyzer")
+st.markdown("## Preparing a Question Bank using OCR + Balanced Auto Question Paper Generator")
 
+# ---------------- Sidebar ----------------
 st.sidebar.header("Upload Files & Settings")
-st.sidebar.write("Upload a syllabus file and a question paper (PDF/image/JSON supported).")
+st.sidebar.write("Upload a syllabus file and a question paper (PDF/Image/JSON supported).")
 
 syllabus_file = st.sidebar.file_uploader("Upload Syllabus (pdf/png/jpg/jpeg/json)", type=["pdf","png","jpg","jpeg","json"])
-question_file = st.sidebar.file_uploader("Upload Question Paper (pdf/png/jpg/jpeg,json)", type=["pdf","png","jpg","jpeg","json"])
+question_file = st.sidebar.file_uploader("Upload Question Paper (pdf/png/jpg/jpeg/json)", type=["pdf","png","jpg","jpeg","json"])
 tess_override = st.sidebar.text_input("Optional: TESSERACT exe path (leave blank to auto-detect)", value="")
 max_questions = st.sidebar.number_input("Max questions to analyze (for testing)", min_value=1, max_value=1000, value=200)
 run_button = st.sidebar.button("Run Analysis")
 
 # configure tesseract
-tpath = ensure_tesseract(tess_override)  # sets pytesseract location if found
+tpath = ensure_tesseract(tess_override)
 st.sidebar.write(f"Using Tesseract: `{tpath}`")
 
+# ---------------- Helper: Split Questions ----------------
 def split_questions_from_text(text):
     if not text or text.strip() == "":
         return []
-    # normalize some common headers
     text = text.replace("\r", "\n")
-    # split using patterns like 1., 1), Q.1, Q1., (a) for subparts
     parts = re.split(r'\n\s*(?=(?:\d{1,3}\.|Q\.\s*\d{1,3}|\d{1,3}\)))', text)
-    # further split when paragraphs contain multiple numbered items
     questions = []
     for p in parts:
         p = p.strip()
         if not p:
             continue
-        # if it contains multiple "1." inside, split internal too
         inner = re.split(r'(?<=\S)\n\s*(?=\d{1,3}\.)', p)
         for it in inner:
             if it.strip():
                 questions.append(it.strip())
-    # final cleanup: keep those with some length
-    out = [q for q in questions if len(q) > 10]
-    return out[:max_questions]
+    return [q for q in questions if len(q) > 10][:max_questions]
 
+# ---------------- Main Run ----------------
 if run_button:
     if not syllabus_file or not question_file:
         st.error("Please upload BOTH a syllabus file and a question paper.")
         st.stop()
 
-    # 1) Read & parse syllabus
+    # 1) Parse syllabus
     syllabus_structured = []
     try:
-        if syllabus_file.type == "application/json" or syllabus_file.name.lower().endswith(".json"):
+        if syllabus_file.name.endswith(".json"):
             raw = syllabus_file.read().decode("utf-8")
             parsed = json.loads(raw)
             syllabus_structured = validate_syllabus_json(parsed)
             st.success(f"Syllabus JSON loaded with {len(syllabus_structured)} subject entries.")
-        elif syllabus_file.type == "application/pdf" or syllabus_file.name.lower().endswith(".pdf"):
-            with st.spinner("Performing OCR on syllabus PDF (this may take a moment)..."):
+
+        elif syllabus_file.name.endswith(".pdf"):
+            with st.spinner("Performing OCR on syllabus PDF..."):
                 pdf_bytes = syllabus_file.read()
-                text = pdf_bytes_to_text(pdf_bytes, dpi=300)
-            st.text_area("Syllabus OCR preview (first 3000 chars)", value=text[:3000], height=220)
-            syllabus_structured = parse_syllabus_text(text)
-            st.success(f"Extracted {len(syllabus_structured)} subject blocks from syllabus.")
-        elif syllabus_file.type.startswith("image") or syllabus_file.name.lower().endswith((".png",".jpg",".jpeg")):
+                raw_text = pdf_bytes_to_text(pdf_bytes, dpi=300)
+            # ✅ AI-based cleaning
+            cleaned_text = clean_text_with_ai(raw_text)
+            st.text_area("Syllabus OCR (AI-cleaned)", value=cleaned_text[:3000], height=220)
+            syllabus_structured = parse_syllabus_text(cleaned_text)
+            st.success(f"Extracted {len(syllabus_structured)} subject blocks.")
+
+        else:
             with st.spinner("Performing OCR on syllabus image..."):
                 b = syllabus_file.read()
-                text = image_bytes_to_text(b)
-            st.text_area("Syllabus OCR preview (first 3000 chars)", value=text[:3000], height=220)
-            syllabus_structured = parse_syllabus_text(text)
-            st.success(f"Extracted {len(syllabus_structured)} subject blocks from syllabus image.")
-        else:
-            st.error("Unsupported syllabus file type.")
-            st.stop()
+                raw_text = image_bytes_to_text(b)
+            # ✅ AI-based cleaning
+            cleaned_text = clean_text_with_ai(raw_text)
+            st.text_area("Syllabus OCR (AI-cleaned)", value=cleaned_text[:3000], height=220)
+            syllabus_structured = parse_syllabus_text(cleaned_text)
+            st.success(f"Extracted {len(syllabus_structured)} subject blocks.")
     except Exception as e:
         st.error(f"Syllabus processing failed: {e}")
         st.stop()
 
-    if not syllabus_structured:
-        st.error("No structured syllabus could be extracted — provide a JSON syllabus for best results.")
-        st.stop()
-
-    # 2) Read & OCR question file
+    # 2) OCR question file
     try:
-        if question_file.type == "application/json" or question_file.name.lower().endswith(".json"):
+        if question_file.name.endswith(".json"):
             rawq = question_file.read().decode("utf-8")
             question_text = rawq
-        elif question_file.type == "application/pdf" or question_file.name.lower().endswith(".pdf"):
+
+        elif question_file.name.endswith(".pdf"):
             with st.spinner("Performing OCR on question PDF..."):
                 pdf_bytes = question_file.read()
-                question_text = pdf_bytes_to_text(pdf_bytes, dpi=300)
-        elif question_file.type.startswith("image") or question_file.name.lower().endswith((".png",".jpg",".jpeg")):
+                raw_qtext = pdf_bytes_to_text(pdf_bytes, dpi=300)
+            # ✅ AI-based cleaning
+            question_text = clean_text_with_ai(raw_qtext)
+            st.text_area("Question OCR (AI-cleaned)", question_text[:3000], height=220)
+
+        else:
             with st.spinner("Performing OCR on question image..."):
                 b = question_file.read()
-                question_text = image_bytes_to_text(b)
-        else:
-            st.error("Unsupported question file type.")
-            st.stop()
-        st.text_area("Question OCR preview (first 3000 chars)", question_text[:3000], height=220)
+                raw_qtext = image_bytes_to_text(b)
+            # ✅ AI-based cleaning
+            question_text = clean_text_with_ai(raw_qtext)
+            st.text_area("Question OCR (AI-cleaned)", question_text[:3000], height=220)
+
     except Exception as e:
-        st.error(f"Question file OCR failed: {e}")
+        st.error(f"Question OCR failed: {e}")
         st.stop()
 
-    # 3) split questions
+    # 3) Split questions
     questions = split_questions_from_text(question_text)
     if not questions:
-        st.error("No questions could be extracted from OCR text. Try better scan or upload as JSON.")
+        st.error("No questions extracted.")
         st.stop()
-    st.success(f"Identified {len(questions)} questions (showing up to max set).")
+    st.success(f"Identified {len(questions)} questions.")
 
-    # 4) Analyze each question with Gemini or fallback
+    # 4) Analyze with Gemini
     results = []
     progress = st.progress(0)
-    status = st.empty()
     for i, q in enumerate(questions, start=1):
-        status.text(f"Analyzing question {i}/{len(questions)}")
         try:
             analysis = analyze_question(q, syllabus_structured)
         except Exception as e:
             analysis = {"question_text": q, "error_message": str(e)}
         analysis["index"] = i
+
+        # Difficulty tagging
+        length = len(q.split())
+        if length < 8: analysis["difficulty"] = "Easy"
+        elif length < 15: analysis["difficulty"] = "Medium"
+        else: analysis["difficulty"] = "Hard"
+
+        # Bloom’s tagging
+        txt = q.lower()
+        if any(w in txt for w in ["define", "list", "state"]): analysis["blooms_level"] = "Remember"
+        elif any(w in txt for w in ["explain", "describe", "summarize"]): analysis["blooms_level"] = "Understand"
+        elif any(w in txt for w in ["apply", "solve", "use"]): analysis["blooms_level"] = "Apply"
+        elif any(w in txt for w in ["analyze", "differentiate", "compare"]): analysis["blooms_level"] = "Analyze"
+        elif any(w in txt for w in ["evaluate", "justify", "assess"]): analysis["blooms_level"] = "Evaluate"
+        elif any(w in txt for w in ["design", "create", "formulate"]): analysis["blooms_level"] = "Create"
+        else: analysis["blooms_level"] = "Uncategorized"
+
         results.append(analysis)
         progress.progress(i / len(questions))
-    status.success("Analysis complete.")
 
-    # 5) Show DataFrame
-    df = pd.DataFrame(results)
-    st.subheader("AI Suggested Mapping")
+    st.session_state["processed_questions"] = results
+    st.success("✅ Analysis complete!")
+
+# ---------------- Show Results ----------------
+if "processed_questions" in st.session_state:
+    df = pd.DataFrame(st.session_state["processed_questions"])
+    st.subheader("📊 AI Suggested Mapping")
     st.dataframe(df.fillna(""), height=350)
 
-    # 6) Manual review UI
-    st.subheader("Manual Review & Edit")
-    edited = []
-    for row in results:
-        with st.expander(f"Q{row['index']}: {row['question_text'][:80]}..."):
-            qtxt = st.text_area("Question text", value=row.get("question_text",""), key=f"q_{row['index']}")
-            subj = st.text_input("Subject Name", value=row.get("subject_name",""), key=f"subj_{row['index']}")
-            code = st.text_input("Subject Code", value=row.get("subject_code",""), key=f"code_{row['index']}")
-            year = st.text_input("Year", value=row.get("year",""), key=f"year_{row['index']}")
-            sem = st.text_input("Semester", value=row.get("semester",""), key=f"sem_{row['index']}")
-            topic = st.text_input("Probable Topic", value=row.get("probable_topic",""), key=f"topic_{row['index']}")
-            co = st.text_input("Course Outcome", value=row.get("course_outcome",""), key=f"co_{row['index']}")
-            qtype = st.selectbox("Question Type", ["MCQ","Short Answer","Broad Answer","Other"],
-                                 index=0 if row.get("question_type") not in ["MCQ","Short Answer","Broad Answer","Other"] else ["MCQ","Short Answer","Broad Answer","Other"].index(row.get("question_type")),
-                                 key=f"type_{row['index']}")
-            conf = st.slider("Confidence Score", min_value=0.0, max_value=1.0, value=float(row.get("confidence_score",0.0)), step=0.01, key=f"conf_{row['index']}")
-            edited.append({
-                "index": row["index"],
-                "question_text": qtxt,
-                "subject_name": subj,
-                "subject_code": code,
-                "year": year,
-                "semester": sem,
-                "probable_topic": topic,
-                "course_outcome": co,
-                "question_type": qtype,
-                "confidence_score": conf
-            })
+    st.download_button("📥 Download Question Bank (JSON)",
+                       data=json.dumps(st.session_state["processed_questions"], indent=4),
+                       file_name="question_bank.json", mime="application/json")
 
-    # 7) Download final
-    st.subheader("Download Final Question Bank")
-    final_json = json.dumps(edited, ensure_ascii=False, indent=2)
-    st.download_button("Download JSON", data=final_json.encode("utf-8"), file_name="question_bank.json", mime="application/json")
-    csv_bytes = pd.DataFrame(edited).to_csv(index=False).encode("utf-8")
-    st.download_button("Download CSV", data=csv_bytes, file_name="question_bank.csv", mime="text/csv")
+# ---------------- Dashboard ----------------
+if "processed_questions" in st.session_state:
+    st.header("🔎 Searchable Question Bank Dashboard")
+    df = pd.DataFrame(st.session_state["processed_questions"])
+    search_text = st.text_input("Search Question Text")
+    if search_text:
+        df = df[df["question_text"].str.contains(search_text, case=False, na=False)]
+    subject_filter = st.selectbox("Filter by Subject", ["All"] + df["subject_name"].dropna().unique().tolist())
+    if subject_filter != "All":
+        df = df[df["subject_name"] == subject_filter]
+    st.dataframe(df)
 
-    st.success("You can now download the final, reviewed question bank.")
+# ---------------- Visualization ----------------
+if "processed_questions" in st.session_state:
+    st.header("📈 Visualization Dashboard")
+    df = pd.DataFrame(st.session_state["processed_questions"])
+    if not df.empty:
+        fig1 = px.pie(df, names="subject_name", title="Questions per Subject")
+        st.plotly_chart(fig1)
+        fig2 = px.histogram(df, x="course_outcome", title="Questions per Course Outcome")
+        st.plotly_chart(fig2)
+
+# ---------------- Balanced Paper Generator ----------------
+st.header("📝 Balanced Auto Question Paper Generator")
+
+def generate_balanced_paper(questions, total_marks=70, num_questions=5,
+                            difficulty_dist={"Easy":0.3,"Medium":0.5,"Hard":0.2},
+                            seed=42):
+    random.seed(seed)
+    selected = []
+
+    # allocate difficulty counts
+    def allocate(total, dist):
+        counts = {k:int(total*dist[k]) for k in dist}
+        while sum(counts.values()) < total:
+            for k in dist:
+                if sum(counts.values()) < total: counts[k]+=1
+        return counts
+
+    diff_counts = allocate(num_questions, difficulty_dist)
+
+    used = set()
+    for diff, count in diff_counts.items():
+        candidates = [q for q in questions if q.get("difficulty")==diff]
+        random.shuffle(candidates)
+        for q in candidates:
+            if q["question_text"] not in used and len(selected)<num_questions:
+                selected.append(q); used.add(q["question_text"])
+            if len(selected)>=num_questions: break
+
+    marks_each = total_marks // num_questions
+    remainder = total_marks % num_questions
+
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial","B",14)
+    pdf.cell(0,8,"Jadavpur University",ln=True,align="C")
+    pdf.cell(0,8,"Balanced Question Paper",ln=True,align="C")
+    pdf.ln(5)
+
+    for i,q in enumerate(selected):
+        m = marks_each + (1 if i < remainder else 0)
+        pdf.set_font("Arial","B",11)
+        pdf.multi_cell(0,6,f"Q{i+1}. ({m} marks) {q['question_text']}")
+        pdf.set_font("Arial","I",8)
+        meta=f"[Diff: {q['difficulty']} | Bloom: {q['blooms_level']} | CO: {q.get('course_outcome','')}]"
+        pdf.multi_cell(0,5,meta)
+        pdf.ln(2)
+
+    file_path=os.path.join(tempfile.gettempdir(),"balanced_question_paper.pdf")
+    pdf.output(file_path)
+    return file_path, selected
+
+if "processed_questions" in st.session_state:
+    num_q = st.number_input("Number of Questions",1,20,5)
+    marks = st.number_input("Total Marks",10,100,70)
+    if st.button("⚡ Generate Balanced Paper"):
+        file_path, chosen = generate_balanced_paper(st.session_state["processed_questions"], total_marks=marks, num_questions=num_q)
+        with open(file_path,"rb") as f:
+            st.download_button("📥 Download Balanced Question Paper (PDF)", f, file_name="balanced_question_paper.pdf")
+        st.json(chosen)
+
+
+
+
+
+
+
+# # app.py
+# import streamlit as st
+# from dotenv import load_dotenv
+# load_dotenv()
+# import os
+# import io
+# import json
+# import re
+# import pandas as pd
+
+# from ocr_utils import ensure_tesseract, image_bytes_to_text, pdf_bytes_to_text
+# from syllabus_parser import parse_syllabus_text, validate_syllabus_json
+# from gemini_handler import analyze_question
+
+# st.set_page_config(page_title="Jadavpur University Question Analyzer", layout="wide")
+# st.title("Jadavpur University Question Analyzer")
+# st.markdown("## Preparing a Question Bank using OCR")
+
+# st.sidebar.header("Upload Files & Settings")
+# st.sidebar.write("Upload a syllabus file and a question paper (PDF/image/JSON supported).")
+
+# syllabus_file = st.sidebar.file_uploader("Upload Syllabus (pdf/png/jpg/jpeg/json)", type=["pdf","png","jpg","jpeg","json"])
+# question_file = st.sidebar.file_uploader("Upload Question Paper (pdf/png/jpg/jpeg,json)", type=["pdf","png","jpg","jpeg","json"])
+# tess_override = st.sidebar.text_input("Optional: TESSERACT exe path (leave blank to auto-detect)", value="")
+# max_questions = st.sidebar.number_input("Max questions to analyze (for testing)", min_value=1, max_value=1000, value=200)
+# run_button = st.sidebar.button("Run Analysis")
+
+# # configure tesseract
+# tpath = ensure_tesseract(tess_override)  # sets pytesseract location if found
+# st.sidebar.write(f"Using Tesseract: `{tpath}`")
+
+# def split_questions_from_text(text):
+#     if not text or text.strip() == "":
+#         return []
+#     # normalize some common headers
+#     text = text.replace("\r", "\n")
+#     # split using patterns like 1., 1), Q.1, Q1., (a) for subparts
+#     parts = re.split(r'\n\s*(?=(?:\d{1,3}\.|Q\.\s*\d{1,3}|\d{1,3}\)))', text)
+#     # further split when paragraphs contain multiple numbered items
+#     questions = []
+#     for p in parts:
+#         p = p.strip()
+#         if not p:
+#             continue
+#         # if it contains multiple "1." inside, split internal too
+#         inner = re.split(r'(?<=\S)\n\s*(?=\d{1,3}\.)', p)
+#         for it in inner:
+#             if it.strip():
+#                 questions.append(it.strip())
+#     # final cleanup: keep those with some length
+#     out = [q for q in questions if len(q) > 10]
+#     return out[:max_questions]
+
+# if run_button:
+#     if not syllabus_file or not question_file:
+#         st.error("Please upload BOTH a syllabus file and a question paper.")
+#         st.stop()
+
+#     # 1) Read & parse syllabus
+#     syllabus_structured = []
+#     try:
+#         if syllabus_file.type == "application/json" or syllabus_file.name.lower().endswith(".json"):
+#             raw = syllabus_file.read().decode("utf-8")
+#             parsed = json.loads(raw)
+#             syllabus_structured = validate_syllabus_json(parsed)
+#             st.success(f"Syllabus JSON loaded with {len(syllabus_structured)} subject entries.")
+#         elif syllabus_file.type == "application/pdf" or syllabus_file.name.lower().endswith(".pdf"):
+#             with st.spinner("Performing OCR on syllabus PDF (this may take a moment)..."):
+#                 pdf_bytes = syllabus_file.read()
+#                 text = pdf_bytes_to_text(pdf_bytes, dpi=300)
+#             st.text_area("Syllabus OCR preview (first 3000 chars)", value=text[:3000], height=220)
+#             syllabus_structured = parse_syllabus_text(text)
+#             st.success(f"Extracted {len(syllabus_structured)} subject blocks from syllabus.")
+#         elif syllabus_file.type.startswith("image") or syllabus_file.name.lower().endswith((".png",".jpg",".jpeg")):
+#             with st.spinner("Performing OCR on syllabus image..."):
+#                 b = syllabus_file.read()
+#                 text = image_bytes_to_text(b)
+#             st.text_area("Syllabus OCR preview (first 3000 chars)", value=text[:3000], height=220)
+#             syllabus_structured = parse_syllabus_text(text)
+#             st.success(f"Extracted {len(syllabus_structured)} subject blocks from syllabus image.")
+#         else:
+#             st.error("Unsupported syllabus file type.")
+#             st.stop()
+#     except Exception as e:
+#         st.error(f"Syllabus processing failed: {e}")
+#         st.stop()
+
+#     if not syllabus_structured:
+#         st.error("No structured syllabus could be extracted — provide a JSON syllabus for best results.")
+#         st.stop()
+
+#     # 2) Read & OCR question file
+#     try:
+#         if question_file.type == "application/json" or question_file.name.lower().endswith(".json"):
+#             rawq = question_file.read().decode("utf-8")
+#             question_text = rawq
+#         elif question_file.type == "application/pdf" or question_file.name.lower().endswith(".pdf"):
+#             with st.spinner("Performing OCR on question PDF..."):
+#                 pdf_bytes = question_file.read()
+#                 question_text = pdf_bytes_to_text(pdf_bytes, dpi=300)
+#         elif question_file.type.startswith("image") or question_file.name.lower().endswith((".png",".jpg",".jpeg")):
+#             with st.spinner("Performing OCR on question image..."):
+#                 b = question_file.read()
+#                 question_text = image_bytes_to_text(b)
+#         else:
+#             st.error("Unsupported question file type.")
+#             st.stop()
+#         st.text_area("Question OCR preview (first 3000 chars)", question_text[:3000], height=220)
+#     except Exception as e:
+#         st.error(f"Question file OCR failed: {e}")
+#         st.stop()
+
+#     # 3) split questions
+#     questions = split_questions_from_text(question_text)
+#     if not questions:
+#         st.error("No questions could be extracted from OCR text. Try better scan or upload as JSON.")
+#         st.stop()
+#     st.success(f"Identified {len(questions)} questions (showing up to max set).")
+
+#     # 4) Analyze each question with Gemini or fallback
+#     results = []
+#     progress = st.progress(0)
+#     status = st.empty()
+#     for i, q in enumerate(questions, start=1):
+#         status.text(f"Analyzing question {i}/{len(questions)}")
+#         try:
+#             analysis = analyze_question(q, syllabus_structured)
+#         except Exception as e:
+#             analysis = {"question_text": q, "error_message": str(e)}
+#         analysis["index"] = i
+#         results.append(analysis)
+#         progress.progress(i / len(questions))
+#     status.success("Analysis complete.")
+
+#     # 5) Show DataFrame
+#     df = pd.DataFrame(results)
+#     st.subheader("AI Suggested Mapping")
+#     st.dataframe(df.fillna(""), height=350)
+
+#     # 6) Manual review UI
+#     st.subheader("Manual Review & Edit")
+#     edited = []
+#     for row in results:
+#         with st.expander(f"Q{row['index']}: {row['question_text'][:80]}..."):
+#             qtxt = st.text_area("Question text", value=row.get("question_text",""), key=f"q_{row['index']}")
+#             subj = st.text_input("Subject Name", value=row.get("subject_name",""), key=f"subj_{row['index']}")
+#             code = st.text_input("Subject Code", value=row.get("subject_code",""), key=f"code_{row['index']}")
+#             year = st.text_input("Year", value=row.get("year",""), key=f"year_{row['index']}")
+#             sem = st.text_input("Semester", value=row.get("semester",""), key=f"sem_{row['index']}")
+#             topic = st.text_input("Probable Topic", value=row.get("probable_topic",""), key=f"topic_{row['index']}")
+#             co = st.text_input("Course Outcome", value=row.get("course_outcome",""), key=f"co_{row['index']}")
+#             qtype = st.selectbox("Question Type", ["MCQ","Short Answer","Broad Answer","Other"],
+#                                  index=0 if row.get("question_type") not in ["MCQ","Short Answer","Broad Answer","Other"] else ["MCQ","Short Answer","Broad Answer","Other"].index(row.get("question_type")),
+#                                  key=f"type_{row['index']}")
+#             conf = st.slider("Confidence Score", min_value=0.0, max_value=1.0, value=float(row.get("confidence_score",0.0)), step=0.01, key=f"conf_{row['index']}")
+#             edited.append({
+#                 "index": row["index"],
+#                 "question_text": qtxt,
+#                 "subject_name": subj,
+#                 "subject_code": code,
+#                 "year": year,
+#                 "semester": sem,
+#                 "probable_topic": topic,
+#                 "course_outcome": co,
+#                 "question_type": qtype,
+#                 "confidence_score": conf
+#             })
+
+#     # 7) Download final
+#     st.subheader("Download Final Question Bank")
+#     final_json = json.dumps(edited, ensure_ascii=False, indent=2)
+#     st.download_button("Download JSON", data=final_json.encode("utf-8"), file_name="question_bank.json", mime="application/json")
+#     csv_bytes = pd.DataFrame(edited).to_csv(index=False).encode("utf-8")
+#     st.download_button("Download CSV", data=csv_bytes, file_name="question_bank.csv", mime="text/csv")
+
+#     st.success("You can now download the final, reviewed question bank.")
 
 
 
@@ -416,6 +672,7 @@ if run_button:
 #     st.markdown("2. **Upload Question Paper:** Select your question paper in PDF or image (JPG, PNG) format.")
 #     st.markdown("3. The app will perform OCR on image/PDF files, structure the syllabus, split questions, and use Gemini AI to categorize them based on your syllabus.")
 #     st.markdown("4. View the results in a table and download them as CSV or JSON.")
+
 
 
 

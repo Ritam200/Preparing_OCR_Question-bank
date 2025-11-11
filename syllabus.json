@@ -1,23 +1,46 @@
 [
   {
-    "subject": "Mathematics for IT-II",
-    "subject_code": "IT/BS/B/T/222",
     "year": "2nd Year",
     "semester": "2nd Semester",
+    "subject": "Mathematics for IT-II",
+    "subject_code": "IT/BS/B/T/222",
     "topics": [
-      "Probability and Bayes’ Theorem",
-      "Random Variables and Probability Distributions",
-      "Exponential Distribution",
-      "Measures of Central Tendency: Mean, Median, Mode",
-      "Variance, Standard Deviation",
-      "Moments, Skewness and Kurtosis",
-      "Sampling Distributions",
-      "Standard Error and Estimation",
-      "Maximum Likelihood Estimation",
-      "Game Theory: Zero-Sum Games, Pure and Mixed Strategies",
-      "Inventory Models and EOQ",
-      "Queuing Theory and Kendall’s Notation",
-      "Project Management: PERT, CPM, Critical Path, Slack Calculation"
+      "Probability:",
+        "Introduction to probability:",
+        "Sample space, Classical, and axiomatic definitions of probability, addition rule and conditional probability, multiplication",
+        "rule, total probability, Bayes’ Theorem and independence, problems.",
+        "Random Variables:",
+        "Discrete, continuousandmixedrandomvariables,probabilitymass,probabilitydensityandcumulativedistributionfunctions,",
+        "expectation, variance & Standard Deviation, Chebyshev’s inequality.",
+        "Special Distributions:",
+        "Discrete Distribution Binomial & , Poisson Distribution related problems ; continuous Distribution uniform, exponential,",
+        "normal Distribution&relatedproblem,Determineofmean&varianceforBinomial,Poisson,uniform&normalDistribution.",
+        "Statistics:",
+        "Measures of CentralTendency:",
+        "Introduction, Mean, Median&Mode,relationbetweenMean,Median&Mode;moments,skewness&kurtosis.Correlation&",
+        "regression. (Marks-10)",
+        "Random sampling.",
+        "Parameter, Statistic and its Sampling distribution, Standard error of statistic. Sampling distribution of sample mean and",
+        "variance, random sampling from a normal distribution (statement only) and related problems;",
+        "Estimation of Parameters:",
+        "Unbiased and consistent estimators, Point estimation, Interval estimation, Maximum likelihood estimation of parameters of",
+        "Binomial andPoissondistribution.MaximumlikelihoodestimationofparametersofNormaldistribution,Confidenceintervals",
+        "and related problems. .",
+        "Applied Statistics:",
+        "Curve fitting of straight lines, second degree parabola.",
+        "Operation Research:",
+        "Game Theory:",
+        "Introduction, Characteristics of Game Theory, Two Person, Zero sum games, Pure strategy. Dominance theory, Mixed",
+        "strategies (2x2, mx2), Algebraic and graphical methods",
+        "Inventory Control:",
+        "Inventory classification, Different cost associated to Inventory, Economic orderquantity,Inventorymodelswithdeterministic",
+        "demands, ABC analysis.",
+        "Queuing Theory:",
+        "Basis of Queuing theory, elements of queuing theory, Kendall’s Notation, Operating characteristics of a queuing system,",
+        "Classification of Queuing models, Preliminary examples of M/M/1:8/FCFA",
+        "Project Management:",
+        "Introduction to PERT and CPM, critical Path calculation, float calculation and its importance. Cost reduction byCrashingof",
+        "activity."
     ],
     "course_outcomes": [
       "CO1: Understand probability concepts and Bayes’ theorem",
@@ -26,6 +49,37 @@
       "CO4: Perform sampling and estimation including MLE",
       "CO5: Apply operations research methods: game theory, inventory models, queuing",
       "CO6: Demonstrate project management techniques using CPM and PERT"
-    ]
-  }
+    ],
+  "raw_text": "(IT/BS/B/T/222) Mathematics for IT-II\nProbability:\nIntroduction to probability:\nSample space, Classical, and axiomatic definitions of probability, addition rule and conditional probability, multiplication\nrule, total probability, Bayes’ Theorem and independence, problems.\nRandom Variables:\nDiscrete, continuousandmixedrandomvariables,probabilitymass,probabilitydensityandcumulativedistributionfunctions,\nexpectation, variance & Standard Deviation, Chebyshev’s inequality.\nSpecial Distributions:\nDiscrete Distribution Binomial & , Poisson Distribution related problems ; continuous Distribution uniform, exponential,\nnormal Distribution&relatedproblem,Determineofmean&varianceforBinomial,Poisson,uniform&normalDistribution.\n.\nStatistics:\nMeasures of CentralTendency:\nIntroduction, Mean, Median&Mode,relationbetweenMean,Median&Mode;moments,skewness&kurtosis.Correlation&\nregression. (Marks-10)\nRandom sampling.\nParameter, Statistic and its Sampling distribution, Standard error of statistic. Sampling distribution of sample mean and\nvariance, random sampling from a normal distribution (statement only) and related problems;\nEstimation of Parameters:\nUnbiased and consistent estimators, Point estimation, Interval estimation, Maximum likelihood estimation of parameters of\nBinomial andPoissondistribution.MaximumlikelihoodestimationofparametersofNormaldistribution,Confidenceintervals\nand related problems. .\nApplied Statistics:\nCurve fitting of straight lines, second degree parabola.\nOperation Research:\nGame Theory:\nIntroduction, Characteristics of Game Theory, Two Person, Zero sum games, Pure strategy. Dominance theory, Mixed\nstrategies (2x2, mx2), Algebraic and graphical methods\nInventory Control:\nInventory classification, Different cost associated to Inventory, Economic orderquantity,Inventorymodelswithdeterministic\ndemands, ABC analysis.\nQueuing Theory:\nBasis of Queuing theory, elements of queuing theory, Kendall’s Notation, Operating characteristics of a queuing system,\nClassification of Queuing models, Preliminary examples of M/M/1:8/FCFA\nProject Management:\nIntroduction to PERT and CPM, critical Path calculation, float calculation and its importance. Cost reduction byCrashingof\nactivity."
+  },
+  {
+    
+      "year": "4th Year",
+      "semester": "1st Semester",
+      "subject_name": "Network Security",
+      "subject_code": "IT/PC/H/T/414",
+      "topics": [
+        "Introduction to Network Security: Overview - Define trust, weaknesses and vulnerabilities, Security Objectives;",
+        "Security at the Application layer: E-MAIL-E-mail Architecture; PGP – Scenarios, Key Rings, PGP Certificate, Key",
+        "Security at the Transport layer: SSL Architecture, Four Protocols – Handshake, ChangeCipherSpec, Alert, Record, SSL",
+        "Security attheNetworklayer:IPSec–TransportandTunnelMode,IPSecSecurityAssociation,Securityprotocols,Services",
+        "Firewalls: Definition, Types of Firewalls - Circuit-Level Firewalls, Proxy Server Firewalls, Non-stateful Packet Filters,",
+        "Stateful Packet Filters, Personal Firewalls (Packet Inspection Firewalls, Application ProxyServer:FilteringBasedonKnown",
+        "Access Control and Authorization: Access Rights, Access Control Systems - Physical Access Control, Access Cards,",
+        "Authentication: Authentication Elements, Types of Authentication-Non-repudiableandrepudiable;AuthenticationMethods",
+        "Password Authentication, Public Key Authentication, Remote Authentication, Anonymous Authentication, Digital",
+        "IEEE 802.11 Wireless LAN Security: Authentication –Pre-WEPauthentication,AuthenticationinWEP,Authenticationand",
+        "Types of attacks, their analysis and mitigations:phishing, wormhole, Sybil, DOS-DDOS, Intrusion Detection System",
+        "Web Services Security: Recapitulation : Technologies for Web Services, WS-Security - Token Types, XML Encryption,"
+      ],
+      "course_outcomes": {
+        "CO1": "Understand the fundamentals of network security and cryptography.",
+        "CO2": "Analyze different encryption and decryption algorithms.",
+        "CO3": "Apply authentication and access control mechanisms in network systems.",
+        "CO4": "Identify and evaluate intrusion detection and prevention systems.",
+        "CO5": "Analyze common network attacks such as phishing and wormhole attacks.",
+        "CO6": "Design secure communication protocols and evaluate their performance."
+      },
+      "raw_text": "(IT/PC/H/T/414) Network Security \n \n Introduction to Network Security: Overview - Define trust, weaknesses and vulnerabilities, Security Objectives;\n Understanding Vulnerabilities the Need for Security - Risk and Vulnerability, TCP/IP Suite Weaknesses, Buffer Overflows,\n Spoofing Techniques, Social Engineering; Understanding Defenses - Digital IDs, Intrusion Detection System, Encrypted\n Login, Firewalls, Reusable Passwords, Antivirus Software, Encrypted Files, Biometrics\n Security at the Application layer: E-MAIL-E-mail Architecture; PGP – Scenarios, Key Rings, PGP Certificate, Key\n Revocation, PGP packets and Messages; S/MIME – MIME, S/MIME, Application of S/MIME\n \n Security at the Transport layer: SSL Architecture, Four Protocols – Handshake, ChangeCipherSpec, Alert, Record, SSL\n Message formats, Transport Layer Security \n Security attheNetworklayer:IPSec–TransportandTunnelMode,IPSecSecurityAssociation,Securityprotocols,Services\n Provided by IPSec , Security Policy, Internet Key Exchange (IKE) - Improved Diffie-Hellman Key Exchange, Phases and\n Modes, SA Algorithms, ISKAMP \n Firewalls: Definition, Types of Firewalls - Circuit-Level Firewalls, Proxy Server Firewalls, Non-stateful Packet Filters,\n Stateful Packet Filters, Personal Firewalls (Packet Inspection Firewalls, Application ProxyServer:FilteringBasedonKnown\n Services, Virtual Private Network (VPN) Firewalls, Small Office orHome(SOHO)Firewalls,NATFirewalls),Configuration\n and Implementation of a Firewall, Improving Security Through the Firewal, Firewall Services and Limitations\n Access Control and Authorization: Access Rights, Access Control Systems - Physical Access Control, Access Cards,\n Electronic Surveillance, Biometric, Event Monitoring; Authorization Systems – Centralize, Decentralized, Implicit, Explicit,\n Authorization Principles - Least Privileges, Separation of Duties; Web Access and Authorization\n \n Authentication: Authentication Elements, Types of Authentication-Non-repudiableandrepudiable;AuthenticationMethods\n - Password Authentication, Public Key Authentication, Remote Authentication, Anonymous Authentication, Digital\n Signatures-Based Authentication, Wireless Authentication \n IEEE 802.11 Wireless LAN Security: Authentication –Pre-WEPauthentication,AuthenticationinWEP,Authenticationand\n Key agreement in 802.11i; Confidentiality and Integrity - Data Protection WEP, Data Protection TKIP and CCMP.\n \n Types of attacks, their analysis and mitigations:phishing, wormhole, Sybil, DOS-DDOS, Intrusion Detection System\n Web Services Security: Recapitulation : Technologies for Web Services, WS-Security - Token Types, XML Encryption,\n SML Signatures, SAML – Assertion Type, Creating/Communicating Assertions, Other Standard – WS-Trust, WS-Security\n Policy"
+    }
 ]

@@ -136,6 +136,147 @@ def extract_topics_and_cos(block_text):
 
 
 
+
+
+
+# # syllabus_parser.py
+# import re
+# import json
+
+# # Basic heuristics parser for common syllabus layouts. Good if syllabus is semi-structured.
+# SUBJECT_HEADING_RE = re.compile(r"^\s*\(?([A-Z0-9/]+)\)?\s*[\-\:\)]?\s*(.+)$", re.IGNORECASE)
+# YEAR_SEM_RE = re.compile(r"(\d+(?:st|nd|rd|th)\s+Year).{0,40}?(\d+(?:st|nd|rd|th)\s+Semester)?", re.IGNORECASE)
+
+# def validate_syllabus_json(obj):
+#     """
+#     If user uploaded structured JSON syllabus, ensure it's in usable form.
+#     Expect a list of subject dicts. Normalize keys.
+#     """
+#     if not isinstance(obj, list):
+#         raise ValueError("Syllabus JSON should be a list of subjects.")
+#     cleaned = []
+#     for item in obj:
+#         if not isinstance(item, dict):
+#             continue
+#         subject = item.get("subject") or item.get("subject_name") or item.get("title") or ""
+#         code = item.get("subject_code") or item.get("code") or ""
+#         topics = item.get("topics") or item.get("syllabus") or []
+#         cos = item.get("course_outcomes") or item.get("course_outcome") or []
+#         cleaned.append({
+#             "subject": subject.strip(),
+#             "subject_code": code.strip(),
+#             "year": item.get("year", ""),
+#             "semester": item.get("semester", ""),
+#             "topics": topics if isinstance(topics, list) else [t.strip() for t in split_topics(str(topics))],
+#             "course_outcomes": cos if isinstance(cos, list) else [c.strip() for c in split_topics(str(cos))],
+#             "raw_text": item.get("raw_text", "")
+#         })
+#     return cleaned
+
+# def split_topics(text):
+#     # split via bullets, semicolons, newlines
+#     parts = re.split(r'[\n•\u2022;•\-–]+', text)
+#     return [p.strip() for p in parts if p.strip()]
+
+# def parse_syllabus_text(raw_text):
+#     """
+#     Heuristic: split by subject headings (lines with code/title) or by double newlines.
+#     Returns list of subject dicts: subject, subject_code, year, semester, topics, course_outcomes, raw_text
+#     """
+#     lines = raw_text.splitlines()
+#     headings_idx = []
+#     for i, line in enumerate(lines):
+#         if SUBJECT_HEADING_RE.match(line):
+#             headings_idx.append(i)
+#     blocks = []
+#     if not headings_idx:
+#         # fallback: split paragraphs
+#         paragraphs = [p.strip() for p in raw_text.split("\n\n") if p.strip()]
+#         for p in paragraphs:
+#             title_line = p.splitlines()[0]
+#             m = SUBJECT_HEADING_RE.match(title_line)
+#             if m:
+#                 code, title = m.group(1), m.group(2)
+#             else:
+#                 code, title = "", title_line
+#             topics, cos = extract_topics_and_cos(p)
+#             blocks.append({
+#                 "subject": title.strip(),
+#                 "subject_code": code.strip(),
+#                 "year": "",
+#                 "semester": "",
+#                 "topics": topics,
+#                 "course_outcomes": cos,
+#                 "raw_text": p
+#             })
+#         return blocks
+
+#     for idx, start in enumerate(headings_idx):
+#         end = headings_idx[idx+1] if idx+1 < len(headings_idx) else len(lines)
+#         block = "\n".join(lines[start:end]).strip()
+#         first_line = lines[start]
+#         m = SUBJECT_HEADING_RE.match(first_line)
+#         if m:
+#             code, title = m.group(1), m.group(2)
+#         else:
+#             code, title = "", first_line
+#         topics, cos = extract_topics_and_cos(block)
+#         blocks.append({
+#             "subject": title.strip(),
+#             "subject_code": code.strip(),
+#             "year": "",
+#             "semester": "",
+#             "topics": topics,
+#             "course_outcomes": cos,
+#             "raw_text": block
+#         })
+#     # try to get year/semester from whole document
+#     ym = YEAR_SEM_RE.search(raw_text)
+#     if ym:
+#         year = ym.group(1).strip()
+#         sem = (ym.group(2) or "").strip()
+#         for b in blocks:
+#             if not b["year"]:
+#                 b["year"] = year
+#             if not b["semester"]:
+#                 b["semester"] = sem
+#     return blocks
+
+# def extract_topics_and_cos(block_text):
+#     """
+#     Simple: find lines after keywords 'Topics','Syllabus','Course Outcomes' etc.
+#     """
+#     lines = [l.strip() for l in block_text.splitlines() if l.strip()]
+#     topics = []
+#     cos = []
+#     co_mode = False
+#     for i, line in enumerate(lines[1:], start=1):
+#         low = line.lower()
+#         if any(k in low for k in ["course outcome", "course outcomes", "learning outcomes", "outcomes", "course objective"]):
+#             co_mode = True
+#             remainder = re.sub(r'^(course outcomes?|learning outcomes?|course objectives?)[:\-\s]*', '', line, flags=re.I)
+#             if remainder.strip():
+#                 cos.append(remainder.strip())
+#             continue
+#         if co_mode:
+#             # collect as CO until likely next heading (short upper case line)
+#             cos.append(line)
+#         else:
+#             # if bullet-like or comma separated or "Module" or "Unit"
+#             if line.startswith(("•","-","*")) or "," in line or ":" in line or re.match(r'^(Module|Unit|Chapter)\b', line, re.I):
+#                 topics.append(line)
+#             else:
+#                 # small lines likely topics
+#                 if len(line.split()) <= 12:
+#                     topics.append(line)
+#     # cleanup
+#     topics = [t.strip() for t in dict.fromkeys(topics) if t.strip()]
+#     cos = [c.strip() for c in dict.fromkeys(cos) if c.strip()]
+#     return topics, cos
+
+
+
+
 # import re
 # import json
 
@@ -297,4 +438,5 @@ def extract_topics_and_cos(block_text):
 #     #         print(json.dumps(parsed_data_from_pdf, indent=2))
 #     # except Exception as e:
 #     #     print(f"Could not test PDF parsing: {e}")
+
 
